@@ -54,7 +54,6 @@ public class CompleteServlet extends HttpServlet {
             // 更新後在庫数 = 更新前在庫数 - 購入数
             int productCode = cartProduct.getProductCode();
             int stockNo = productStockNoMap.get(productCode) - cartProduct.getPurchasePlanNumber();
-            productStockNoMap.put(productCode, stockNo); // TODO 暫定処理 (カート情報のグルーピング処理が実装されたら削除する)
             productDao.updateStockNo(productCode, stockNo);
         }
 

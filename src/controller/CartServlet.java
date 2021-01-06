@@ -1,7 +1,10 @@
 package controller;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -57,10 +60,11 @@ public class CartServlet extends HttpServlet {
         cartProductModelList.add(cartProductModel);
         cartModel.setCartProductModelList(cartProductModelList);
 
-        // TODO ここにカート情報のグルーピング処理が入る
+        // 重複するカート情報をグルーピング
+        groupingCartProductModelList(cartModel);
 
         // 合計金額 (税抜)
-        int totalPrice = (int)cartProductModelList
+        int totalPrice = (int)cartModel.getCartProductModelList()
                 .stream()
                 .mapToInt(c -> (c.getProductPrice() * c.getPurchasePlanNumber())).sum();
 
@@ -76,5 +80,27 @@ public class CartServlet extends HttpServlet {
 
         // カート画面に遷移
         response.sendRedirect("/ec-site/CartServlet");
+    }
+
+    private void groupingCartProductModelList(CartModel cartModel) {
+        // 商品コード毎の購入個数を集計 (key:商品コード value:購入個数)
+        Map<Integer, Integer> purchasePlanNumberMap = cartModel.getCartProductModelList().
+                stream().
+                collect(Collectors.groupingBy(CartProductModel::getProductCode,
+                        Collectors.summingInt(CartProductModel::getPurchasePlanNumber)));
+
+        // 商品情報の重複を削除
+        Map<Integer, Boolean> cartProductMap = new HashMap<>();
+        List<CartProductModel> distinctCartProductList = cartModel.getCartProductModelList().
+                stream().
+                filter(p -> cartProductMap.putIfAbsent(p.getProductCode(), Boolean.TRUE) == null).
+                collect(Collectors.toList());
+
+        // 購入個数を更新
+        distinctCartProductList.
+            stream().
+            forEach(p -> p.setPurchasePlanNumber(purchasePlanNumberMap.get(p.getProductCode())));
+
+        cartModel.setCartProductModelList(distinctCartProductList);
     }
 }
